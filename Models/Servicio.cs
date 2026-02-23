@@ -18,5 +18,9 @@ namespace DataBridgeAudioUploader.Models
         public string UrlFTP { get; set; }
         
         public bool Activo { get; set; }
+
+        public string MetadataJson { get; set; }
+
+        public string NombreContenedor { get; set; }
     }
 }

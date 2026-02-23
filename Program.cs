@@ -9,17 +9,27 @@ namespace DataBridgeAudioUploader
 {
     internal static class Program
     {
-        /// <summary>
-        /// Punto de entrada principal para la aplicación.
-        /// </summary>
         static void Main()
         {
-            ServiceBase[] ServicesToRun;
-            ServicesToRun = new ServiceBase[]
-            {
-                new Service1()
-            };
-            ServiceBase.Run(ServicesToRun);
-        }
+            #if DEBUG
+                //MODO CONSOLA
+                Console.WriteLine("Iniciando RPA en modo prueba (Consola)...");
+        
+                var orquestador = new DataBridgeAudioUploader.Utils.ProcesoOrquestador();
+        
+                orquestador.Ejecutar(); 
+        
+                Console.WriteLine("Proceso finalizado. Presiona Enter para salir.");
+                Console.ReadLine();
+            #else
+                //MODO PRODUCCIÓN
+                ServiceBase[] ServicesToRun;
+                ServicesToRun = new ServiceBase[]
+                {
+                    new Service1() 
+                };
+                ServiceBase.Run(ServicesToRun);
+            #endif
+        }   
     }
 }

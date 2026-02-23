@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using DataBridgeAudioUploader.Data;
+using Newtonsoft.Json;
 
 namespace DataBridgeAudioUploader.Utils
 {
@@ -39,10 +41,29 @@ namespace DataBridgeAudioUploader.Utils
                 {
                     var servicios = context.GetServiciosActivos();
                     var ftpManager = new FtpManager();
-                    var iaStudioManager = new IaStudioManager();
+                    var azureStorageManager = new AzureStorageManager();
 
                     foreach (var servicio in servicios)
                     {
+                        // Leer el campo de metadata de la BD y deserializar a diccionario
+                        Dictionary<string, string> metadata = new Dictionary<string, string>();
+                        if (!string.IsNullOrWhiteSpace(servicio.MetadataJson))
+                        {
+                            try
+                            {
+                                metadata = JsonConvert.DeserializeObject<Dictionary<string, string>>(servicio.MetadataJson) 
+                                           ?? new Dictionary<string, string>();
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine($"Error al deserializar JSON de metadata para servicio {servicio.IdServicio}: {ex.Message}");
+                            }
+                        }
+
+                        // Agregar o sobreescribir las llaves solicitadas
+                        metadata["agentId"] = "00";
+                        metadata["datetime"] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+
                         // Creamos una carpeta temporal única por servicio descargado
                         string tempRuta = Path.Combine(Path.GetTempPath(), "DataBridgeUploads", servicio.IdServicio.ToString());
 
@@ -56,17 +77,12 @@ namespace DataBridgeAudioUploader.Utils
 
                             foreach (var archivo in archivos)
                             {
-                                // 3) Generar JSON dummy y llamar a IaStudioManager
-                                string nombreArchivo = Path.GetFileName(archivo);
-                                string jsonMetadata = $"{{\"fileName\": \"{nombreArchivo}\", \"status\": \"pending\", \"processId\": 1}}";
+                                // 3) Llama a AzureStorageManager pasando la ruta del archivo y el contenedor (de la BD)
+                                string nombreContenedor = string.IsNullOrWhiteSpace(servicio.NombreContenedor) ? "default-container" : servicio.NombreContenedor;
                                 
-                                // Para efectos prácticos, colocamos valores dummy ya que la base de datos Servicio (aún) no los tiene mapeados
-                                string apiUrl = "https://api.iastudio.com/upload"; 
-                                string token = "MI_TOKEN_NULO_DUMMY"; 
+                                bool exito = await azureStorageManager.SubirAudioAzureAsync(archivo, nombreContenedor, metadata);
 
-                                bool exito = await iaStudioManager.SubirAudioAsync(archivo, jsonMetadata, apiUrl, token);
-
-                                // 4) Si la subida por http es exitosa (OK), eliminar o limpiar archivo temporal local
+                                // 4) Si la subida es exitosa, eliminar o limpiar archivo temporal local
                                 if (exito)
                                 {
                                     File.Delete(archivo);
