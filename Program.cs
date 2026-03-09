@@ -1,35 +1,41 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.ServiceProcess;
-using System.Text;
-using System.Threading.Tasks;
+using DataBridgeAudioUploader.Utils; //Ajusta según tu namespace real
 
 namespace DataBridgeAudioUploader
 {
-    internal static class Program
+    static class Program
     {
         static void Main()
         {
-            #if DEBUG
-                //MODO CONSOLA
-                Console.WriteLine("Iniciando RPA en modo prueba (Consola)...");
-        
-                var orquestador = new DataBridgeAudioUploader.Utils.ProcesoOrquestador();
-        
-                orquestador.Ejecutar(); 
-        
-                Console.WriteLine("Proceso finalizado. Presiona Enter para salir.");
-                Console.ReadLine();
-            #else
-                //MODO PRODUCCIÓN
-                ServiceBase[] ServicesToRun;
-                ServicesToRun = new ServiceBase[]
+            //Consola
+            if (Environment.UserInteractive)
+            {
+                Console.WriteLine("Acá empezando a correr el RPA en modo consola, dale que te sigo...");
+                try
                 {
-                    new Service1() 
-                };
+                    SincronizadorAudios orquestador = new SincronizadorAudios();
+                    orquestador.Ejecutar().Wait(); //Esperamos a que termine ya que ahora es async (o bloqueará la app).
+                }
+                catch (Exception ex)
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine("Uhhh chabón, tiró un error re feo: " + ex.Message);
+                    if (ex.InnerException != null)
+                        Console.WriteLine("El chisme completo: " + ex.InnerException.Message);
+                }
+
+                Console.ResetColor();
+                Console.WriteLine("\nBueno, ya terminó todo por hoy. Apretá cualquier tecla para salir...");
+                Console.ReadKey();
+            }
+            else
+            {
+                //Servicio
+                ServiceBase[] ServicesToRun;
+                ServicesToRun = new ServiceBase[] { new Service1() };
                 ServiceBase.Run(ServicesToRun);
-            #endif
-        }   
+            }
+        }
     }
 }

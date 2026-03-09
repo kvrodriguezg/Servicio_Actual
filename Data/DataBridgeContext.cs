@@ -9,6 +9,8 @@ namespace DataBridgeAudioUploader.Data
     {
         public DataBridgeContext() : base("name=DataBridgeConnection")
         {
+            //Desactivar el chequeo de "migrations" para omitir si la base ya estaba creada y es diferente
+            Database.SetInitializer<DataBridgeContext>(null);
         }
 
         public DbSet<Servicio> Servicios { get; set; }
